@@ -400,3 +400,23 @@ Detects corrupted images, missing hands, blurry images, and class imbalance.
 ## 📄 License
 
 MIT
+to run the projecton Vs code this 
+
+"""cd c:\Users\sunda\OneDrive\Desktop\CLAUDE_P1
+
+# Activate virtual environment (Windows)
+.venv\Scripts\activate
+
+# Install Python dependencies (first time only)
+pip install -r backend/requirements.txt
+
+# Start the FastAPI + Socket.IO server
+python -m uvicorn backend.server:app --host 0.0.0.0 --port 8000"""
+
+"""cd c:\Users\sunda\OneDrive\Desktop\CLAUDE_P1\frontend
+
+# Install Node dependencies (first time only)
+npm install
+
+# Start the Vite dev server
+npm run dev """

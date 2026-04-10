@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Filter } from 'lucide-react'
 import GradientCard from '../components/GradientCard'
-import { getLogs } from '../services/api'
-import { getSocket } from '../services/websocket'
+import { getLogs } from '../services/apiClient'
+import { getSocket } from '../services/socketClient'
 
 const FILTERS = ['All', 'ERROR', 'INFO', 'WARNING']
 

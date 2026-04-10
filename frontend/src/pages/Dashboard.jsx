@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import StatCard from '../components/StatCard'
 import GradientCard from '../components/GradientCard'
 import LiveChart from '../components/LiveChart'
-import { getModelStatus, getDatasetInfo } from '../services/api'
+import { getModelStatus, getDatasetInfo } from '../services/apiClient'
 
 export default function Dashboard() {
   const [modelStatus, setModelStatus] = useState(null)

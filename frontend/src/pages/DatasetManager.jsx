@@ -4,7 +4,7 @@ import { Database, Layers, Image } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import GradientCard from '../components/GradientCard'
 import LiveChart from '../components/LiveChart'
-import { getDatasetInfo } from '../services/api'
+import { getDatasetInfo } from '../services/apiClient'
 
 export default function DatasetManager() {
   const [info, setInfo] = useState(null)

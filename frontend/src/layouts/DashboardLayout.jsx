@@ -11,7 +11,7 @@ import {
   Activity,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getModelStatus } from '../services/api'
+import { getModelStatus } from '../services/apiClient'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },

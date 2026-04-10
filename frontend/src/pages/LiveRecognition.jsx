@@ -8,6 +8,13 @@ import GradientCard from '../components/GradientCard'
 import { getSocket, disconnectSocket } from '../services/websocket'
 import { postSpeak, getSuggestions } from '../services/api'
 
+// ─── Letter Acceptance Settings ──────────────────────────
+// How many consecutive frames the SAME letter must appear before it's accepted
+const HOLD_FRAMES_REQUIRED = 8        // ~0.8s at 10fps — adjust up/down to taste
+// After a letter is accepted, ignore all predictions for this many ms
+const COOLDOWN_MS = 1800              // 1.8 seconds cooldown between accepted letters
+// ─────────────────────────────────────────────────────────
+
 export default function LiveRecognition() {
   const [isActive, setIsActive] = useState(true)
   const [letter, setLetter] = useState(null)
@@ -17,10 +24,16 @@ export default function LiveRecognition() {
   const [history, setHistory] = useState([])
   const [connected, setConnected] = useState(false)
   const [threshold, setThreshold] = useState(0.4)
-  const [landmarks, setLandmarks] = useState(null) // Hand landmarks for visualization
+  const [landmarks, setLandmarks] = useState(null)
   const [suggestions, setSuggestions] = useState(['', '', '', ''])
-  const lastLetterRef = useRef(null)
-  const lastLetterTimeRef = useRef(0)
+
+  // ─── Letter detection state ───────────────────────────
+  // Tracks the current candidate letter and how many frames it's been held
+  const holdLetterRef = useRef(null)      // current candidate letter being held
+  const holdCountRef = useRef(0)          // how many frames it's been seen consecutively
+  const cooldownUntilRef = useRef(0)      // timestamp until which we ignore predictions
+  // ─────────────────────────────────────────────────────
+
   const socketRef = useRef(null)
   const suggestTimerRef = useRef(null)
 
@@ -50,31 +63,59 @@ export default function LiveRecognition() {
     socket.on('disconnect', () => setConnected(false))
 
     socket.on('prediction', (data) => {
-      // Update landmarks for hand skeleton visualization
+      // Always update landmarks and displayed letter/confidence for visual feedback
       setLandmarks(data.landmarks || null)
-      
-      if (data.letter) {
-        setLetter(data.letter)
-        setConfidence(data.confidence || 0)
 
-        const now = Date.now()
-        // Debounce: only add to word if different letter or >1.5s gap
-        if (data.letter !== lastLetterRef.current || now - lastLetterTimeRef.current > 1500) {
-          setWord((prev) => prev + data.letter)
-          lastLetterRef.current = data.letter
-          lastLetterTimeRef.current = now
-        }
+      if (!data.letter) {
+        // No hand detected — reset hold counter but keep displaying last letter
+        holdLetterRef.current = null
+        holdCountRef.current = 0
+        setConfidence(data.confidence || 0)
+        return
+      }
+
+      setLetter(data.letter)
+      setConfidence(data.confidence || 0)
+
+      const now = Date.now()
+
+      // ── Cooldown check ────────────────────────────────
+      // If we're still in cooldown after the last accepted letter, skip
+      if (now < cooldownUntilRef.current) {
+        return
+      }
+
+      // ── Hold counter ──────────────────────────────────
+      // If the incoming letter matches our current candidate, increment hold count
+      if (data.letter === holdLetterRef.current) {
+        holdCountRef.current += 1
+      } else {
+        // New letter — reset candidate and counter
+        holdLetterRef.current = data.letter
+        holdCountRef.current = 1
+      }
+
+      // ── Accept letter ─────────────────────────────────
+      // Only accept the letter once it's been held for HOLD_FRAMES_REQUIRED frames
+      if (holdCountRef.current >= HOLD_FRAMES_REQUIRED) {
+        // Accept the letter!
+        const acceptedLetter = holdLetterRef.current
+
+        setWord((prev) => prev + acceptedLetter)
 
         setHistory((prev) => [
           {
-            letter: data.letter,
+            letter: acceptedLetter,
             confidence: data.confidence,
             time: new Date().toLocaleTimeString(),
           },
           ...prev.slice(0, 9),
         ])
-      } else {
-        setConfidence(data.confidence || 0)
+
+        // Start cooldown and reset hold state
+        cooldownUntilRef.current = now + COOLDOWN_MS
+        holdLetterRef.current = null
+        holdCountRef.current = 0
       }
     })
 
@@ -102,7 +143,9 @@ export default function LiveRecognition() {
     if (word) {
       setSentence((prev) => (prev ? prev + ' ' + word : word))
       setWord('')
-      lastLetterRef.current = null
+      holdLetterRef.current = null
+      holdCountRef.current = 0
+      cooldownUntilRef.current = 0
     }
   }
 
@@ -111,7 +154,9 @@ export default function LiveRecognition() {
     setSentence('')
     setLetter(null)
     setConfidence(0)
-    lastLetterRef.current = null
+    holdLetterRef.current = null
+    holdCountRef.current = 0
+    cooldownUntilRef.current = 0
   }
 
   const speakText = async () => {
@@ -134,7 +179,9 @@ export default function LiveRecognition() {
       setSentence(words.length > 0 ? words.join(' ') + ' ' : '')
       setWord(lastWord || '')
     }
-    lastLetterRef.current = null
+    holdLetterRef.current = null
+    holdCountRef.current = 0
+    cooldownUntilRef.current = 0
   }
 
   // Fetch word suggestions when word changes
@@ -160,11 +207,12 @@ export default function LiveRecognition() {
 
   const handleSuggestionSelect = (suggestion) => {
     if (!suggestion) return
-    // Replace the current word with the suggestion
     setWord('')
     setSentence((prev) => (prev ? prev + ' ' + suggestion : suggestion))
     setSuggestions(['', '', '', ''])
-    lastLetterRef.current = null
+    holdLetterRef.current = null
+    holdCountRef.current = 0
+    cooldownUntilRef.current = 0
   }
 
   return (
