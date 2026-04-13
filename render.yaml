@@ -1,8 +1,12 @@
 services:
   - type: web
-    name: signlens-backend
+    name: signlens-api
     runtime: docker
     dockerfilePath: ./Dockerfile
+    repo: https://github.com/SGP23/Signlens
+    branch: main
+    plan: free
+    healthCheckPath: /health
     envVars:
       - key: PYTHONUNBUFFERED
         value: "1"
