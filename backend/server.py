@@ -339,28 +339,40 @@ def load_model() -> bool:
     global MODEL, CLASS_NAMES, MODEL_LOAD_TIME, MODEL_TYPE
     start = time.time()
 
-    # Try landmark model first
-    landmark_model_path = PROJECT_ROOT / "landmark_classifier.pt"
-    landmark_labels_path = PROJECT_ROOT / "landmark_class_labels.txt"
-    
-    # Fallback to CNN model if landmark model not found
-    cnn_model_path = PROJECT_ROOT / "sign_language_cnn_trained.pt"
-    cnn_labels_path = PROJECT_ROOT / "class_labels.txt"
+    # Search for landmark model in multiple locations (handles Render's varying cwd)
+    search_dirs = [PROJECT_ROOT, BASE_DIR, Path.cwd()]
+    landmark_model_path = None
+    landmark_labels_path = None
+    cnn_model_path = None
+    cnn_labels_path = None
 
-    logger.info(f"Looking for landmark model at: {landmark_model_path}")
-    print(f"MODEL SEARCH: landmark={landmark_model_path} exists={landmark_model_path.exists()}", flush=True)
-    if landmark_model_path.exists():
+    for search_dir in search_dirs:
+        candidate = search_dir / "landmark_classifier.pt"
+        print(f"MODEL SEARCH: checking {candidate} exists={candidate.exists()}", flush=True)
+        if candidate.exists():
+            landmark_model_path = candidate
+            landmark_labels_path = search_dir / "landmark_class_labels.txt"
+            cnn_labels_path = search_dir / "class_labels.txt"
+            break
+        # Also check for CNN fallback
+        cnn_candidate = search_dir / "sign_language_cnn_trained.pt"
+        if cnn_candidate.exists() and cnn_model_path is None:
+            cnn_model_path = cnn_candidate
+            cnn_labels_path = search_dir / "class_labels.txt"
+
+    if landmark_model_path is not None:
         model_path = landmark_model_path
-        labels_path = landmark_labels_path if landmark_labels_path.exists() else cnn_labels_path
+        labels_path = landmark_labels_path if landmark_labels_path.exists() else (cnn_labels_path or PROJECT_ROOT / "class_labels.txt")
         MODEL_TYPE = "landmark"
-    elif cnn_model_path.exists():
+        logger.info(f"Found landmark model at: {model_path}")
+    elif cnn_model_path is not None:
         logger.warning("Landmark model not found, falling back to CNN model")
         model_path = cnn_model_path
-        labels_path = cnn_labels_path
+        labels_path = cnn_labels_path or PROJECT_ROOT / "class_labels.txt"
         MODEL_TYPE = "cnn"
     else:
-        logger.error(f"No model file found. Expected: {landmark_model_path}")
-        print(f"MODEL LOAD FAILED: No model file found at {landmark_model_path}", flush=True)
+        logger.error(f"No model file found in: {[str(d) for d in search_dirs]}")
+        print(f"MODEL LOAD FAILED: No model file found in {[str(d) for d in search_dirs]}", flush=True)
         return False
 
     try:
@@ -700,6 +712,14 @@ async def model_status():
             "window_size": TEMPORAL_WINDOW_SIZE,
             "min_frames": TEMPORAL_MIN_FRAMES,
             "consistency_threshold": TEMPORAL_CONSISTENCY_THRESHOLD,
+        },
+        "debug": {
+            "base_dir": str(BASE_DIR),
+            "project_root": str(PROJECT_ROOT),
+            "cwd": str(Path.cwd()),
+            "model_file_at_root": (PROJECT_ROOT / "landmark_classifier.pt").exists(),
+            "model_file_at_base": (BASE_DIR / "landmark_classifier.pt").exists(),
+            "model_file_at_cwd": (Path.cwd() / "landmark_classifier.pt").exists(),
         },
     }
 
