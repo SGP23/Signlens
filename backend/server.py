@@ -45,10 +45,16 @@ from backend.prediction.word_predictor import WordPredictor
 DISAMBIGUATOR = GeometricDisambiguator()
 WORD_PREDICTOR = WordPredictor()
 
-# ─── Socket.IO Server (created early so logger can reference it) ──
+# ─── Allowed Origins for CORS ─────────────────────────────
+ALLOWED_ORIGINS = [
+    "https://sgp23.github.io",
+    "http://localhost:5173",   # Vite dev server (local development only)
+    "http://localhost:3000",   # Alternate dev server
+]
+
 sio = socketio.AsyncServer(
     async_mode="asgi",
-    cors_allowed_origins="*",
+    cors_allowed_origins=ALLOWED_ORIGINS,
     logger=False,
     engineio_logger=False,
 )
@@ -635,7 +641,7 @@ fastapi_app = FastAPI(title="Sign Language Recognition API", lifespan=lifespan)
 
 fastapi_app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -890,4 +896,4 @@ app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)

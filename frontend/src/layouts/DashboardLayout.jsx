@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getModelStatus } from '../services/apiClient'
+import { logError } from '../services/logger'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -122,7 +123,7 @@ function ModelStatusBadge() {
   useEffect(() => {
     getModelStatus()
       .then(setStatus)
-      .catch(() => setStatus({ loaded: false }))
+      .catch((e) => { logError('DashboardLayout.modelStatus', e); setStatus({ loaded: false }) })
   }, [])
 
   if (!status) return null

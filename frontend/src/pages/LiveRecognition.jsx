@@ -7,6 +7,7 @@ import WordSuggestions from '../components/WordSuggestions'
 import GradientCard from '../components/GradientCard'
 import { getSocket, disconnectSocket } from '../services/websocket'
 import { postSpeak, getSuggestions } from '../services/api'
+import { logError } from '../services/logger'
 
 // ─── Letter Acceptance Settings ──────────────────────────
 // How many consecutive frames the SAME letter must appear before it's accepted
@@ -165,7 +166,7 @@ export default function LiveRecognition() {
       try {
         await postSpeak(text.trim())
       } catch (e) {
-        console.error('TTS failed:', e)
+        logError('LiveRecognition.speakText', e)
       }
     }
   }

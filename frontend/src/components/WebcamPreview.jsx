@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
+import { logError } from '../services/logger'
 
 // MediaPipe hand landmark connections for drawing skeleton
 const HAND_CONNECTIONS = [
@@ -35,7 +36,7 @@ export default function WebcamPreview({ onFrame, isActive = true, deviceId = '',
         videoRef.current.srcObject = stream
       }
     } catch (err) {
-      console.error('Webcam access failed:', err)
+      logError('WebcamPreview.startWebcam', err)
       let errorMsg
       if (err.name === 'NotAllowedError') {
         errorMsg = 'Camera access denied. Please allow camera access in your browser settings.'

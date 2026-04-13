@@ -4,6 +4,7 @@ import { Filter } from 'lucide-react'
 import GradientCard from '../components/GradientCard'
 import { getLogs } from '../services/apiClient'
 import { getSocket } from '../services/socketClient'
+import { logError } from '../services/logger'
 
 const FILTERS = ['All', 'ERROR', 'INFO', 'WARNING']
 
@@ -16,7 +17,7 @@ export default function Logs() {
   useEffect(() => {
     getLogs()
       .then((data) => setLogs(data.logs || []))
-      .catch(console.error)
+      .catch((e) => logError('Logs.fetchLogs', e))
   }, [])
 
   // Listen for live log events

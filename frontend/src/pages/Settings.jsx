@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Camera, Sliders, Save } from 'lucide-react'
 import GradientCard from '../components/GradientCard'
+import { logError } from '../services/logger'
 
 export default function Settings() {
   const [devices, setDevices] = useState([])
@@ -28,7 +29,7 @@ export default function Settings() {
           if (s.threshold) setThreshold(s.threshold)
         }
       } catch (e) {
-        console.error('Cannot enumerate devices:', e)
+        logError('Settings.enumerate', e)
       }
     }
     enumerate()

@@ -5,6 +5,7 @@ import StatCard from '../components/StatCard'
 import GradientCard from '../components/GradientCard'
 import LiveChart from '../components/LiveChart'
 import { getDatasetInfo } from '../services/apiClient'
+import { logError } from '../services/logger'
 
 export default function DatasetManager() {
   const [info, setInfo] = useState(null)
@@ -13,7 +14,7 @@ export default function DatasetManager() {
   useEffect(() => {
     getDatasetInfo()
       .then(setInfo)
-      .catch(console.error)
+      .catch((e) => logError('DatasetManager.fetch', e))
       .finally(() => setLoading(false))
   }, [])
 
