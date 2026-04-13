@@ -1,13 +1,22 @@
 FROM python:3.11-slim
 
 # Install system libraries required by MediaPipe and OpenCV
-# libgles2 provides libGLESv2.so.2, libgl1 provides libGL.so.1
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# MediaPipe requires: libGLESv2.so.2 (GLES), libEGL.so.1 (EGL), libGL.so.1
+# We install the full Mesa packages (not just virtual/meta packages) to ensure
+# the actual .so files are present in the container.
+RUN apt-get update && apt-get install -y \
     libgles2 \
+    libegl1 \
     libgl1 \
+    libglvnd0 \
     libglib2.0-0 \
     libx11-6 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && ldconfig \
+    && echo "=== Verifying required libraries ===" \
+    && ldconfig -p | grep -i glesv2 \
+    && ldconfig -p | grep -i egl \
+    && echo "=== All libraries found ==="
 
 WORKDIR /opt/render/project/src
 

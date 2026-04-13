@@ -493,8 +493,13 @@ def predict_from_frame(
         metadata["info"] = "DETECTOR_NOT_LOADED"
         return None, 0.0, metadata
 
-    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
-    result = detector.detect(mp_image)
+    try:
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
+        result = detector.detect(mp_image)
+    except Exception as detect_err:
+        logger.error(f"MediaPipe detect() failed: {detect_err}")
+        metadata["info"] = f"DETECTION_ERROR: {detect_err}"
+        return None, 0.0, metadata
 
     if not result.hand_landmarks:
         metadata["info"] = "NO_HAND_DETECTED"
@@ -567,7 +572,7 @@ def predict_from_frame(
         predicted_label, quality["top1_conf"], landmarks_np
     )
     if was_corrected:
-        metadata["info"] = f"DISAMBIGUATED: {predicted_label} → {refined_label}"
+        metadata["info"] = f"DISAMBIGUATED: {predicted_label} -> {refined_label}"
         predicted_label = refined_label
     
     # Add informational note about confidence level
@@ -681,7 +686,21 @@ async def lifespan(app_instance: FastAPI):
     logger.info("Starting Sign Language Recognition API...")
     success = load_model()
     if not success:
-        logger.warning("Model not loaded — predictions will be unavailable")
+        logger.warning("Model not loaded - predictions will be unavailable")
+
+    # Eagerly initialize MediaPipe hand detector at startup
+    # This surfaces missing library errors immediately rather than silently
+    # failing on every prediction request.
+    try:
+        detector = get_hand_detector()
+        if detector is not None:
+            logger.info("MediaPipe HandLandmarker initialized successfully at startup")
+        else:
+            logger.error("MediaPipe HandLandmarker failed to initialize - predictions will fail")
+    except Exception as e:
+        logger.error(f"MediaPipe initialization error: {e}")
+        print(f"MEDIAPIPE INIT FAILED: {e}", flush=True)
+
     yield
     logger.info("Shutting down API")
 
